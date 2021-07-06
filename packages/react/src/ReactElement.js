@@ -347,6 +347,11 @@ export function jsxDEV(type, config, maybeKey, source, self) {
  * See https://reactjs.org/docs/react-api.html#createelement
  */
 export function createElement(type, config, children) {
+  // createElement
+  // - 参数
+  //  - type：可以是一个字符串后者是一个组件，是组件变量时首字母通常大写
+  //  - config：配置，比如一个标签的属性集合
+  //  - children：子节点，也可以是再次通过 React.createElement() 生成
   let propName;
 
   // Reserved names are extracted
@@ -359,79 +364,154 @@ export function createElement(type, config, children) {
 
   if (config != null) {
     if (hasValidRef(config)) {
+
       ref = config.ref;
 
       if (__DEV__) {
         warnIfStringRefCannotBeAutoConverted(config);
       }
+
+      // function hasValidRef(config) {
+      //   if (__DEV__) {
+      //     if (hasOwnProperty.call(config, 'ref')) {
+      //       const getter = Object.getOwnPropertyDescriptor(config, 'ref').get;
+      //       if (getter && getter.isReactWarning) {
+      //         return false;
+      //       }
+      //     }
+      //   }
+      //   return config.ref !== undefined;
+      // }
+      // 解析：
+      // (一) 前值知识：
+      // (1) Object.getOwnPropertyDescriptor(obj, props)
+      // - 返回指定对象上 ( 一个自有属性 ) 对应的 ( 属性描述符 ) => 自有属性指的是 ( 直接赋值该对象的属性，不需要从原型链上进行查找的属性 )
+      // - 参数：(1) obj需要查找的目标对象 (2) 目标对象内属性名称
+      // - 返回值：
+      //    - 1. 如果指定的属性存在于对象上，则返回其 ( 属性描述符对象 ) property descriptor
+      //    - 2. 否则返回 undefined
+      // - 例子
+      //    - const obj = {name: 'woow_wu7'}; Object.getOwnPropertyDescriptor(obj, 'name')
+      //    - 返回：{configurable: true, enumerable: true, value: "woow_wu7", writable: true}
+      // (2) hasOwnProperty()
+      // - const hasOwnProperty = Object.prototype.hasOwnProperty;
+      // (二) if 判断语句表示
+      // - 如果：config不是null，并且是DEV环境，并且ref属性是config对象的自身属性，并且属性描述对象中getter存在，并且isReactWarning是true，则返回false
+      // - 否则：config.ref !== undefined; 不是undefined返回true
     }
     if (hasValidKey(config)) {
       key = '' + config.key;
+      // function hasValidKey(config) {
+      //   if (__DEV__) {
+      //     if (hasOwnProperty.call(config, 'key')) {
+      //       const getter = Object.getOwnPropertyDescriptor(config, 'key').get;
+      //       if (getter && getter.isReactWarning) {
+      //         return false;
+      //       }
+      //     }
+      //   }
+      //   return config.key !== undefined;
+      // }
+      // 验证config中是否有key属性，有则从新赋值key，并把key转成字符串
     }
 
-    self = config.__self === undefined ? null : config.__self;
-    source = config.__source === undefined ? null : config.__source;
+    self = config.__self === undefined ? null : config.__self; // 不存在赋值null，存在直接赋值
+    source = config.__source === undefined ? null : config.__source; // 同上
     // Remaining properties are added to a new props object
     for (propName in config) {
       if (
         hasOwnProperty.call(config, propName) &&
         !RESERVED_PROPS.hasOwnProperty(propName)
+        // const RESERVED_PROPS = {
+        //   key: true,
+        //   ref: true,
+        //   __self: true,
+        //   __source: true,
+        // };
+        // RESERVED => reserved => 保留的
+        // Reserved_props
       ) {
         props[propName] = config[propName];
+        // 遍历config，如果是自身属性并且不再保留的props的范围内，即赋值给props
+        // props是在函数开头，定义的空对象 const props = {};
       }
     }
   }
 
   // Children can be more than one argument, and those are transferred onto
-  // the newly allocated props object.
-  const childrenLength = arguments.length - 2;
-  if (childrenLength === 1) {
-    props.children = children;
-  } else if (childrenLength > 1) {
-    const childArray = Array(childrenLength);
+  // the newly allocated props object. // 参数中children不止一个，可以缓存到新的数组中去
+  const childrenLength = arguments.length - 2; // 因为参数是 type，config，...children，所以要arguments.length - 2
+  if (childrenLength === 1) { // 只有一个children，children是函数 createElement(type, config, children) 的第三个参数
+    props.children = children; // 则直接赋值给 props.children
+  } else if (childrenLength > 1) { // 如果children大于1
+    const childArray = Array(childrenLength); // 声明长度为 childrenLength 的空数组
     for (let i = 0; i < childrenLength; i++) {
-      childArray[i] = arguments[i + 2];
+      childArray[i] = arguments[i + 2]; // 并把所有children参数存入childArray数组
     }
     if (__DEV__) {
       if (Object.freeze) {
-        Object.freeze(childArray);
+        Object.freeze(childArray); // 开发环境冻结对象
       }
     }
-    props.children = childArray;
+    props.children = childArray; // 多个children时，一样赋值给 props.children
   }
 
   // Resolve default props
-  if (type && type.defaultProps) {
+  if (type && type.defaultProps) { // type.defaultProps存在
     const defaultProps = type.defaultProps;
     for (propName in defaultProps) {
       if (props[propName] === undefined) {
-        props[propName] = defaultProps[propName];
+        props[propName] = defaultProps[propName]; // defaultProps中的属性在props中的属性不存在，就添加进去
       }
     }
   }
   if (__DEV__) {
-    if (key || ref) {
+    if (key || ref) { // 如果config中key或者ref存在
       const displayName =
-        typeof type === 'function'
+        typeof type === 'function' // type是函数组件
           ? type.displayName || type.name || 'Unknown'
-          : type;
+          : type; // type不是函数组件，则 displayName = type
       if (key) {
-        defineKeyPropWarningGetter(props, displayName);
+        defineKeyPropWarningGetter(props, displayName); // 可以存在就赋值给props，并且说明警告函数，key不能作为props传入，但是可以使用其他属性作为props值一样即可
+        // function defineKeyPropWarningGetter(props, displayName) {
+        //   const warnAboutAccessingKey = function() {
+        //     if (__DEV__) {
+        //       if (!specialPropKeyWarningShown) {
+        //         specialPropKeyWarningShown = true;
+        //         console.error(
+        //           '%s: `key` is not a prop. Trying to access it will result ' +
+        //             'in `undefined` being returned. If you need to access the same ' +
+        //             'value within the child component, you should pass it as a different ' +
+        //             'prop. (https://reactjs.org/link/special-props)',
+        //           displayName,
+        //         );
+        //       }
+        //     }
+        //   };
+        //   warnAboutAccessingKey.isReactWarning = true;
+        //   Object.defineProperty(props, 'key', {
+        //     get: warnAboutAccessingKey,
+        //     configurable: true,
+        //   });
+        // }
       }
       if (ref) {
-        defineRefPropWarningGetter(props, displayName);
+        defineRefPropWarningGetter(props, displayName); // 同理，ref存在就赋值给props对象，警告函数一样，ref不能作为props，可以使用其他属性作为props值一样即可
       }
     }
   }
-  return ReactElement(
-    type,
-    key,
-    ref,
-    self,
-    source,
-    ReactCurrentOwner.current,
-    props,
+  return ReactElement( // 返回 ReactElement() 的函数调用
+    type, // createElement的第一个参数
+    key, // 保留props
+    ref, // 保留props
+    self, // null || config.__self
+    source, // nul l|| config.__source
+    ReactCurrentOwner.current, // null || Fiber
+    props, // props对象
   );
+  // const ReactCurrentOwner = {
+  //   current: (null: null | Fiber),
+  // };
 }
 
 /**

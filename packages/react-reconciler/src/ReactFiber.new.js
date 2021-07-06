@@ -108,6 +108,22 @@ if (__DEV__) {
   }
 }
 
+// Fiber
+// Fiber reconciler 的两个阶段
+  // 1. reconciliation/render 阶段
+    // 该阶段是生成 fiber-tree的过程，可以被打断，执行优先级更高的任务
+    // - 第一次生成fiber-tree(current)：初始渲染一次性生成 fiber-tree
+    // - 新生成的fiber-tree(workInProgress)：后续diff过程中，根据之前的fiber-tree，和virtual-dom生成新的fiber-tree
+
+    // scheduler
+    // 为了使在reconciliation阶段，能把控制权交给浏览器，就需要一个 ( 调度器scheduler )
+    // 新的fiber-tree每生成一个新的节点，就会向 ( effect list ) 添加这个节点
+    //  - 1. 如果有优先级更高的任务，则react会放弃生成这个树
+    //  - 2. 如果没有优先级更高的任务，则继续生成
+
+  // 2. commit 阶段
+    // 将 ( 需要更新的节点 ) 一次性的 ( 批量更新 )
+
 function FiberNode(
   tag: WorkTag,
   pendingProps: mixed,
@@ -115,24 +131,24 @@ function FiberNode(
   mode: TypeOfMode,
 ) {
   // Instance
-  this.tag = tag;
+  this.tag = tag; // 标识 fiber 类型的标签
   this.key = key;
   this.elementType = null;
   this.type = null;
   this.stateNode = null;
 
   // Fiber
-  this.return = null;
-  this.child = null;
-  this.sibling = null;
+  this.return = null; // 指向父节点
+  this.child = null; // 指向子节点
+  this.sibling = null; // 指向兄弟节点
   this.index = 0;
 
   this.ref = null;
 
-  this.pendingProps = pendingProps;
-  this.memoizedProps = null;
+  this.pendingProps = pendingProps; // 在开始执行时设置的 props 的值
+  this.memoizedProps = null; //  在结束时设置的 props 值
   this.updateQueue = null;
-  this.memoizedState = null;
+  this.memoizedState = null; // 当前 state
   this.dependencies = null;
 
   this.mode = mode;
